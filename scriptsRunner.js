@@ -35,26 +35,6 @@ const execute = (scriptName) =>
     });
   });
 
-const run = async () => {
-  for (const command of commands) {
-    for (const scriptName of packageScripts) {
-      try {
-        if (scriptName === command) {
-          await execute(scriptName);
-        }
-
-        if (command.includes("*")) {
-          const commandPart = command.replace("*", "");
-          // TODO: refactor
-          if (scriptName.startsWith(commandPart) || scriptName.endsWith(commandPart)) {
-            await execute(scriptName);
-          }
-        }
-      } catch (e) {
-        process.exit(1);
-      }
-    }
-  }
-};
+const run = async () => {};
 
 run();

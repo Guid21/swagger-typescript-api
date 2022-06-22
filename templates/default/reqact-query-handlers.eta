@@ -97,6 +97,7 @@ const queryTmpl = (query != null && queryName) || null;
 const bodyContentKindTmpl = requestContentKind[requestBodyInfo.contentKind] || null;
 const responseFormatTmpl = responseContentKind[responseBodyInfo.success && responseBodyInfo.success.schema && responseBodyInfo.success.schema.contentKind] || null;
 const securityTmpl = security ? 'true' : null;
+const funcName = route.routeName.usage[0].toLowerCase() + route.routeName.usage.slice(1);
 
 const describeReturnType = () => {
     if (!config.toJS) return "";
@@ -121,7 +122,7 @@ const describeReturnType = () => {
 
  */
 
-export const use<%~ route.routeName.usage %> = (<%~ wrapperArgs %>)<%~ config.toJS ? `: ${describeReturnType()}` : "" %> =>
+export const <%~ funcName %> = (<%~ wrapperArgs %>)<%~ config.toJS ? `: ${describeReturnType()}` : "" %> =>
     axios.request<any, AxiosResponse<<%~ type %>, AxiosError<<%~ errorType %>>>>({
         url: `<%~ path %>`,
         method: '<%~ _.upperCase(method) %>',
@@ -133,7 +134,7 @@ export const use<%~ route.routeName.usage %> = (<%~ wrapperArgs %>)<%~ config.to
         ...<%~ _.get(requestConfigParam, "name") %>,
     })<%~ route.namespace ? ',' : '' %>
 
-export const useMutation<%~ route.routeName.usage %> = genMutation(use<%~ route.routeName.usage %>)
-export const useInfiniteQuery<%~ route.routeName.usage %> = genInfiniteQuery(use<%~ route.routeName.usage %>)
-export const useQuery<%~ route.routeName.usage %> = genQuery(use<%~ route.routeName.usage %>)
+export const useMutation<%~ route.routeName.usage %> = genMutation(<%~ funcName %>)
+export const useInfiniteQuery<%~ route.routeName.usage %> = genInfiniteQuery(<%~ funcName %>)
+export const useQuery<%~ route.routeName.usage %> = genQuery(<%~ funcName %>)
 export const genQueryKey<%~ route.routeName.usage %> = (<%~ wrapperQueryKeyArgs === '{}: {}' ? '' : wrapperQueryKeyArgs%>) => `<%~ path %>`

@@ -20,4 +20,5 @@ module.exports = {
   NameResolver: NameResolver,
   _: require("lodash"),
   require: require("./templateRequire").templateRequire,
+  inflection: require("inflection"),
 };
