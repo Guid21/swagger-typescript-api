@@ -1,6 +1,6 @@
 {
-  "name": "swagger-typescript-api",
-  "version": "9.2.0",
+  "name": "yabloko",
+  "version": "0.0.2",
   "description": "Generate typescript/javascript api from swagger schema",
   "scripts": {
     "cli:json": "node index.js -r -d -p ./swagger-test-cli.json -n swagger-test-cli.ts",
@@ -58,6 +58,7 @@
     "axios": "^0.21.1",
     "commander": "^6.2.1",
     "eta": "^1.12.1",
+    "inflection": "^1.13.2",
     "js-yaml": "^4.0.0",
     "lodash": "^4.17.21",
     "make-dir": "^3.1.0",

@@ -11,7 +11,46 @@ const {
   summary,
   pathArgs,
 } = routeInfo;
-const { _, fmtToJSDocLine, require } = utils;
+const { _, fmtToJSDocLine, require, inflection } = utils;
+
+const {singularize, camelize} = inflection
+
+const SERVICE_PARTS = ['api', 'v1']
+
+const METHODS_DICTIONARY = {
+  put: 'update',
+}
+
+const isDynamic = (str) => str.startsWith('{')
+
+const generateName = (
+  route,
+  method
+) => {
+  if (!route || !method) {
+    return undefined
+  }
+
+  const lower = route.toLowerCase()
+  const lowerMethod = method.toLowerCase()
+  let result = METHODS_DICTIONARY[lowerMethod] || lowerMethod
+
+  const routeParts = lower.split('/')
+  for (let i = 0; i < routeParts.length; i++) {
+    const part = routeParts[i]
+    if (SERVICE_PARTS.includes(part) || isDynamic(part)) {
+      continue
+    } else {
+      const nextPart = routeParts[i + 1]
+      if (nextPart && isDynamic(nextPart)) {
+        result += `_${singularize(part) || part}`
+      } else {
+        result += `_${part}`
+      }
+    }
+  }
+  return camelize(result)
+}
 
 const methodAliases = {
   get: (pathName, hasPathInserts) =>
@@ -30,7 +69,7 @@ const createCustomOperationId = (method, route, moduleName) => {
     : splitedRouteBySlash
   ).join("_");
   return routeParts.length > 3 && methodAliases[method]
-    ? methodAliases[method](routeParts, hasPathInserts)
+    ? generateName(route, method)
     : _.camelCase(_.lowerCase(method) + "_" + [moduleName].join("_")) || "index";
 };
 
