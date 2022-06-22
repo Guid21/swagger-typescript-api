@@ -39,7 +39,30 @@ const rawWrapperArgs = config.extractRequestParams ?
         requestConfigParam,
     ])
 
-const wrapperArgs = rawWrapperArgs.reduce(
+
+const rawWrapperArgsJs = rawWrapperArgs.reduce(
+      (acc, v) => {
+          return acc + '\n' + v.name + ','
+        },
+      '{'
+    )
+    + '}'
+const rawWrapperArgsTs = rawWrapperArgs.reduce(
+      (acc, v) => {
+          return acc + '\n' + argToTmpl(v).replace('params: RequestParams = {}', 'params?: RequestParams') + ';'
+        },
+      '{'
+    ) + '}'
+
+
+const wrapperArgs = rawWrapperArgsJs
+    + ': '
+    + rawWrapperArgsTs
+    + (new RegExp('(.*[^\?]):').test(rawWrapperArgsTs) ? '' : ' | void = {}')
+
+const wrapperQueryKeyArgs = rawWrapperArgs
+    .filter(v => !['data', 'query', 'params'].includes(v.name))
+    .reduce(
       (acc, v) => {
           return acc + '\n' + v.name + ','
         },
@@ -47,7 +70,9 @@ const wrapperArgs = rawWrapperArgs.reduce(
     )
     + '}'
     + ': '
-    + rawWrapperArgs.reduce(
+    + rawWrapperArgs
+    .filter(v => !['data', 'query', 'params' ].includes(v.name))
+    .reduce(
       (acc, v) => {
           return acc + '\n' + argToTmpl(v).replace('params: RequestParams = {}', 'params?: RequestParams') + ';'
         },
@@ -95,14 +120,20 @@ const describeReturnType = () => {
 <%~ routeDocs.lines %>
 
  */
-<%~ route.routeName.usage %><%~ route.namespace ? ': ' : ' = ' %>(<%~ wrapperArgs %>)<%~ config.toJS ? `: ${describeReturnType()}` : "" %> =>
-    <%~ config.singleHttpClient ? 'this.http.request' : 'this.request' %><<%~ type %>, <%~ errorType %>>({
-        path: `<%~ path %>`,
+
+export const use<%~ route.routeName.usage %> = (<%~ wrapperArgs %>)<%~ config.toJS ? `: ${describeReturnType()}` : "" %> =>
+    axios.request<any, AxiosResponse<<%~ type %>, AxiosError<<%~ errorType %>>>>({
+        url: `<%~ path %>`,
         method: '<%~ _.upperCase(method) %>',
-        <%~ queryTmpl ? `query: ${queryTmpl},` : '' %>
-        <%~ bodyTmpl ? `body: ${bodyTmpl},` : '' %>
+        <%~ queryTmpl ? `params: ${queryTmpl},` : '' %>
+        <%~ bodyTmpl ? `data: ${bodyTmpl},` : '' %>
         <%~ securityTmpl ? `secure: ${securityTmpl},` : '' %>
         <%~ bodyContentKindTmpl ? `type: ${bodyContentKindTmpl},` : '' %>
         <%~ responseFormatTmpl ? `format: ${responseFormatTmpl},` : '' %>
         ...<%~ _.get(requestConfigParam, "name") %>,
     })<%~ route.namespace ? ',' : '' %>
+
+export const useMutation<%~ route.routeName.usage %> = genMutation(use<%~ route.routeName.usage %>)
+export const useInfiniteQuery<%~ route.routeName.usage %> = genInfiniteQuery(use<%~ route.routeName.usage %>)
+export const useQuery<%~ route.routeName.usage %> = genQuery(use<%~ route.routeName.usage %>)
+export const genQueryKey<%~ route.routeName.usage %> = (<%~ wrapperQueryKeyArgs === '{}: {}' ? '' : wrapperQueryKeyArgs%>) => `<%~ path %>`

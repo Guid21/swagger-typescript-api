@@ -1,0 +1,127 @@
+import { AxiosResponse } from 'axios'
+import {
+  useMutation,
+  UseMutationOptions,
+  useQuery,
+  UseQueryOptions,
+  useInfiniteQuery,
+  UseInfiniteQueryOptions,
+} from 'react-query'
+
+import { getBodyFromResponse, catchError } from 'lib/axios'
+
+type TData<
+  T extends Promise<
+    AxiosResponse<{
+      body?: any
+    }>
+  > = Promise<
+    AxiosResponse<{
+      body?: any
+    }>
+  >
+> = T extends Promise<
+  AxiosResponse<{
+    body?: infer R
+  }>
+>
+  ? R
+  : never
+type TError<
+  T extends Promise<AxiosResponse<any, any>> = Promise<AxiosResponse<any, any>>
+> = T extends Promise<AxiosResponse<any, infer R>> ? R : never
+type Handler = (...args: any) => Promise<AxiosResponse<any>>
+type TQueryKey<P = unknown> = [P, string]
+type GetParameters<T extends (...args: any) => any = (...args: any) => any> =
+  Parameters<T>[0]
+
+export const genMutation = <T extends Handler = Handler>(handler: T) => {
+  type Params = GetParameters<typeof handler>
+  type Return = ReturnType<typeof handler>
+
+  return (
+    options?: UseMutationOptions<TData<Return>, TError<Return>, Params>
+  ) =>
+    useMutation({
+      ...options,
+      mutationFn: (variables) =>
+        handler(variables).then(getBodyFromResponse).catch(catchError),
+    })
+}
+
+export const genQuery = <T extends Handler>(handler: T) => {
+  type Params = GetParameters<typeof handler>
+  type Return = ReturnType<typeof handler>
+
+  return (
+    params: Params,
+    options?: Omit<
+      UseQueryOptions<TData<Return>, TError<Return>, TData<Return>, TQueryKey>,
+      'queryKey'
+    >
+  ) => {
+    return useQuery({
+      ...options,
+      queryKey: [params, handler.name],
+      queryFn: ({ queryKey }) =>
+        handler(queryKey[0]).then(getBodyFromResponse).catch(catchError),
+    })
+  }
+}
+
+export const genInfiniteQuery = <T extends Handler>(handler: T) => {
+  type Params = GetParameters<typeof handler>
+  type Return = ReturnType<typeof handler>
+
+  return (
+    params: Params,
+    options?: Omit<
+      UseInfiniteQueryOptions<
+        TData<Return>,
+        TError<Return>,
+        TData<Return>,
+        TData<Return>,
+        TQueryKey
+      >,
+      ''
+    >
+  ) => {
+    return useInfiniteQuery({
+      ...options,
+      queryKey: [params, handler.name],
+      queryFn: ({ queryKey, pageParam }) => {
+        const variables = queryKey[0] as any
+
+        return handler({
+          ...variables,
+          query: { ...variables.query, ...pageParam },
+        })
+          .then(getBodyFromResponse)
+          .catch(catchError)
+      },
+      getNextPageParam: (lastPage) => {
+        return lastPage
+      },
+    })
+  }
+}
+
+const MUTATION = 'mutation'
+const QUERY = 'query'
+const INFINITE_QUERY = 'infiniteQuery'
+
+export const genHandler = <T extends Handler>(
+  handler: T,
+  type: typeof MUTATION | typeof QUERY | typeof INFINITE_QUERY = MUTATION
+) => {
+  switch (type) {
+    case MUTATION:
+      return genMutation(handler)
+    case QUERY:
+      return genQuery(handler)
+    case INFINITE_QUERY:
+      return genInfiniteQuery(handler)
+    default:
+      return null
+  }
+}
