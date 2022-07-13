@@ -37,7 +37,9 @@ const descriptionLines = _.compact([
 */
 <% } %>
 
-import { genHandler, genMutation, genQuery, genInfiniteQuery } from './genHandler'
+type GetWithoutBody<T extends {body?: any}> = T extends {body?: infer R} ? R : never
+
+import { genHandler, genMutation, genQuery, genInfiniteQuery, TQueryKey } from './genHandler'
 
 <% routes.combined && routes.combined.forEach(({ routes = [], moduleName }) => { %>
     <% routes.forEach((route) => { %>

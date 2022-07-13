@@ -54,14 +54,15 @@ const rawWrapperArgsTs = rawWrapperArgs.reduce(
       '{'
     ) + '}'
 
-
+const nameRawWrapperArgsTs = `${route.routeName.usage}Options`
+const nameRawWrapperReturnTs = `${route.routeName.usage}Data`
 const wrapperArgs = rawWrapperArgsJs
     + ': '
-    + rawWrapperArgsTs
+    + nameRawWrapperArgsTs
     + (new RegExp('(.*[^\?]):').test(rawWrapperArgsTs) ? '' : ' | void = {}')
 
-const wrapperQueryKeyArgs = rawWrapperArgs
-    .filter(v => !['data', 'query', 'params'].includes(v.name))
+const wrapperQueryKeyArgsJs =rawWrapperArgs
+    .filter(v => !['params'].includes(v.name))
     .reduce(
       (acc, v) => {
           return acc + '\n' + v.name + ','
@@ -69,15 +70,19 @@ const wrapperQueryKeyArgs = rawWrapperArgs
       '{'
     )
     + '}'
-    + ': '
-    + rawWrapperArgs
-    .filter(v => !['data', 'query', 'params' ].includes(v.name))
+
+const wrapperQueryKeyArgsTs = rawWrapperArgs
+    .filter(v => !['params' ].includes(v.name))
     .reduce(
       (acc, v) => {
           return acc + '\n' + argToTmpl(v).replace('params: RequestParams = {}', 'params?: RequestParams') + ';'
         },
       '{'
     ) + '}'
+const wrapperQueryKeyArgs = 'args'
+    + ': '
+    + wrapperQueryKeyArgsTs
+    + (new RegExp('(.*[^\?]):').test(wrapperQueryKeyArgsTs) ? '' : ' | void = {}')
 
 // RequestParams["type"]
 const requestContentKind = {
@@ -98,6 +103,7 @@ const bodyContentKindTmpl = requestContentKind[requestBodyInfo.contentKind] || n
 const responseFormatTmpl = responseContentKind[responseBodyInfo.success && responseBodyInfo.success.schema && responseBodyInfo.success.schema.contentKind] || null;
 const securityTmpl = security ? 'true' : null;
 const funcName = route.routeName.usage[0].toLowerCase() + route.routeName.usage.slice(1);
+const queryKeyName = 'genQueryKey' + route.routeName.usage
 
 const describeReturnType = () => {
     if (!config.toJS) return "";
@@ -112,6 +118,14 @@ const describeReturnType = () => {
     }
 }
 
+
+const queryKeyArgs = rawWrapperArgs.filter(v => !['params'].includes(v.name)).reduce(
+      (acc, v) => {
+          return acc + '\n' + v.name + ','
+        },
+      '{'
+    ) + '}' 
+
 %>
 /**
 <%~ routeDocs.description %>
@@ -121,6 +135,9 @@ const describeReturnType = () => {
 <%~ routeDocs.lines %>
 
  */
+
+export type <%~ nameRawWrapperArgsTs %> = <%~ rawWrapperArgsTs %>;
+export type <%~ nameRawWrapperReturnTs %> = GetWithoutBody<<%~ type %>>;
 
 export const <%~ funcName %> = (<%~ wrapperArgs %>)<%~ config.toJS ? `: ${describeReturnType()}` : "" %> =>
     axios.request<any, AxiosResponse<<%~ type %>, AxiosError<<%~ errorType %>>>>({
@@ -134,7 +151,18 @@ export const <%~ funcName %> = (<%~ wrapperArgs %>)<%~ config.toJS ? `: ${descri
         ...<%~ _.get(requestConfigParam, "name") %>,
     })<%~ route.namespace ? ',' : '' %>
 
+export const <%~ queryKeyName %> = (
+  <%~ wrapperQueryKeyArgs%> 
+  ): TQueryKey => {
+  if (Object.keys(args || {}).length > 0) return ['<%~ path %>', args || {}]
+  return ['<%~ path %>']
+}
 export const useMutation<%~ route.routeName.usage %> = genMutation(<%~ funcName %>)
-export const useInfiniteQuery<%~ route.routeName.usage %> = genInfiniteQuery(<%~ funcName %>)
-export const useQuery<%~ route.routeName.usage %> = genQuery(<%~ funcName %>)
-export const genQueryKey<%~ route.routeName.usage %> = (<%~ wrapperQueryKeyArgs === '{}: {}' ? '' : wrapperQueryKeyArgs%>) => `<%~ path %>`
+export const useInfiniteQuery<%~ route.routeName.usage %> = genInfiniteQuery({
+  handler: <%~ funcName %>,
+  genQueryKey: <%~ queryKeyName %>
+  })
+export const useQuery<%~ route.routeName.usage %> = genQuery({
+  handler: <%~ funcName %>,
+  genQueryKey: <%~ queryKeyName %>
+  })
