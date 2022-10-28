@@ -20,7 +20,7 @@ export type QueryParamsType = Record<string | number, any>;
     body?: unknown;
     }
 
-    export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path"> & { showErrorToast: boolean };
+    export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path"> & { showErrorToast?: boolean; fullResponse?: boolean };
 
       export interface ApiConfig<SecurityDataType=unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
           securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
